@@ -27,7 +27,7 @@ public class EntityMapper {
 
 		if (element == null) return null;
 		
-		String entityType = element.getClass().getSimpleName();
+		String entityType = getEntityType(element.getClass());
 		
 		com.google.appengine.api.datastore.Entity entity = element.getId() == null ? new com.google.appengine.api.datastore.Entity(entityType) : new com.google.appengine.api.datastore.Entity(KeyFactory.createKey(entityType, element.getId()));
 		
@@ -83,7 +83,7 @@ public class EntityMapper {
 	private Object getRelated(Class<?> type, DatastoreService datastoreService, Long id) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
 		Entity entity;
 		try {
-			entity = datastoreService.get(KeyFactory.createKey(type.getSimpleName(), id));
+			entity = datastoreService.get(KeyFactory.createKey(getEntityType(type), id));
 		} catch (EntityNotFoundException e) {
 			return null;
 		}
@@ -134,4 +134,13 @@ public class EntityMapper {
 		return !(Modifier.isTransient(modifier) || Modifier.isStatic(modifier) || Modifier.isAbstract(modifier));
 	}
 
+	
+	public static String getEntityType(Class<?> type) {
+		if (type.isAnnotationPresent(EntityName.class)) {
+			EntityName nm = type.getAnnotation(EntityName.class);
+			return nm.value();
+		}
+		return type.getSimpleName();	
+	}
+	
 }

@@ -32,7 +32,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	public AbstractRepository(final Class<T> type) {
 		this.type = type;
-		this.entityName = type.getSimpleName();
+		this.entityName = EntityMapper.getEntityType(type);
 		this.datastoreService = DatastoreServiceFactory.getDatastoreService();
 	}
 	
