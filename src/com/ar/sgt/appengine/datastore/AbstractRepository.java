@@ -24,21 +24,20 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	private final Class<T> type;
 	
-	private final DatastoreService datastoreService;
-	
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	private EntityMapper mapper = new EntityMapper();
 	
+	private DatastoreService datastoreService;
+	
 	public AbstractRepository(final Class<T> type) {
 		this.type = type;
 		this.entityName = EntityMapper.getEntityType(type);
-		this.datastoreService = DatastoreServiceFactory.getDatastoreService();
 	}
 	
 	protected T fromEntity(Entity entity) {
 		try {
-			return mapper.fromDatastoreEntity(entity, type, this.datastoreService);
+			return mapper.fromDatastoreEntity(entity, type, getDatastoreService());
 		} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
 			logger.error("fromEntity: {}", e);
 			throw new RuntimeException(e);
@@ -58,7 +57,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	public Optional<T> get(Long id) {
 		Entity entity;
 		try {
-			entity = datastoreService.get(KeyFactory.createKey(entityName, id));
+			entity = getDatastoreService().get(KeyFactory.createKey(entityName, id));
 		} catch (EntityNotFoundException e) {
 			return Optional.ofNullable(null);
 		}
@@ -68,13 +67,13 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	@Override
 	public void save(T obj) {
 		Entity entity = toEntity(obj);
-		datastoreService.put(entity);
+		getDatastoreService().put(entity);
 		obj.setId(entity.getKey().getId());
 	}
 
 	@Override
 	public void save(Iterable<T> it) {
-		Transaction transaction = datastoreService.beginTransaction();
+		Transaction transaction = getDatastoreService().beginTransaction();
 		for (T e : it) {
 			save(e);
 		}
@@ -84,7 +83,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	@Override
 	public List<T> findAll() {
 		Query query = new Query(entityName);
-		PreparedQuery pq = datastoreService.prepare(query);
+		PreparedQuery pq = getDatastoreService().prepare(query);
 		
 		List<T> objects = new ArrayList<T>();
 		
@@ -98,15 +97,15 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	@Override
 	public void delete(T obj) {
 		if (obj != null && obj.getId() != null) {
-			datastoreService.delete(KeyFactory.createKey(entityName, obj.getId()));
+			getDatastoreService().delete(KeyFactory.createKey(entityName, obj.getId()));
 		}
 	}
 	
 	@Override
 	public void delete(Iterable<T> objList) {
-		Transaction transaction = datastoreService.beginTransaction();
+		Transaction transaction = getDatastoreService().beginTransaction();
 		for (T obj : objList) {
-			datastoreService.delete(KeyFactory.createKey(entityName, obj.getId()));	
+			getDatastoreService().delete(KeyFactory.createKey(entityName, obj.getId()));	
 		}
 		transaction.commit();
 	}
@@ -115,8 +114,18 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 		return entityName;
 	}
 
+	protected void initializeDatastore() {
+		synchronized (this) {
+			if (this.datastoreService == null) {
+				this.datastoreService = DatastoreServiceFactory.getDatastoreService();
+			}
+		}
+	}
 	protected DatastoreService getDatastoreService() {
-		return datastoreService;
+		if (this.datastoreService == null) {
+			this.initializeDatastore();
+		}
+		return this.datastoreService;
 	}
 	
 }

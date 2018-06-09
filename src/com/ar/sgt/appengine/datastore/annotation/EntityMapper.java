@@ -14,6 +14,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 
 import com.ar.sgt.appengine.datastore.AbstractEntity;
 import com.ar.sgt.appengine.datastore.utils.DateUtils;
+import com.ar.sgt.appengine.datastore.utils.EntityUtils;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
@@ -35,11 +36,7 @@ public class EntityMapper {
 			if (field.isAnnotationPresent(Id.class)) {
 				continue;
 			}
-			String fieldName = field.getName();
-			if (field.isAnnotationPresent(FieldName.class)) {
-				FieldName fn = field.getAnnotation(FieldName.class);
-				fieldName = fn.value();
-			}
+			String fieldName = EntityUtils.getFieldName(field);
 			Object value = getPropertyValue(field, element);
 			if (field.isAnnotationPresent(Unindexed.class)) {
 				entity.setUnindexedProperty(fieldName, value);				
@@ -62,11 +59,7 @@ public class EntityMapper {
 			if (field.isAnnotationPresent(Id.class)) {
 				setPropertyValue(field, entity.getKey().getId(), newObject);
 			} else {
-				String fieldName = field.getName();
-				if (field.isAnnotationPresent(FieldName.class)) {
-					FieldName fn = field.getAnnotation(FieldName.class);
-					fieldName = fn.value();
-				}
+				String fieldName = EntityUtils.getFieldName(field);
 				Object value = entity.getProperty(fieldName);
 				if (value != null && AbstractEntity.class.isAssignableFrom(field.getType())) {
 					Object fk = getRelated(field.getType(), datastoreService, (Long) value);
