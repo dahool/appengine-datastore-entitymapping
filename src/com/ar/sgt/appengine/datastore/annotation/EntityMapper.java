@@ -11,8 +11,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.beanutils.PropertyUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ar.sgt.appengine.datastore.AbstractEntity;
+import com.ar.sgt.appengine.datastore.LazyLoadHandler;
 import com.ar.sgt.appengine.datastore.utils.DateUtils;
 import com.ar.sgt.appengine.datastore.utils.EntityUtils;
 import com.google.appengine.api.datastore.DatastoreService;
@@ -20,8 +23,12 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.KeyFactory;
 
+import net.sf.cglib.proxy.Enhancer;
+
 public class EntityMapper {
 
+	private Logger logger = LoggerFactory.getLogger(getClass());
+	
 	private Map<String, List<Field>> cached = new HashMap<String, List<Field>>();
 	
 	public com.google.appengine.api.datastore.Entity toDatastoreEntity(AbstractEntity element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException  {
@@ -62,7 +69,12 @@ public class EntityMapper {
 				String fieldName = EntityUtils.getFieldName(field);
 				Object value = entity.getProperty(fieldName);
 				if (value != null && AbstractEntity.class.isAssignableFrom(field.getType())) {
-					Object fk = getRelated(field.getType(), datastoreService, (Long) value);
+					Object fk = null;
+					if (field.isAnnotationPresent(Lazy.class)) {
+						fk = getLazyRelated(field.getType(), datastoreService, (Long) value);
+					} else {
+						fk = getRelated(field.getType(), datastoreService, (Long) value);
+					}
 					setPropertyValue(field, fk, newObject);	
 				} else {
 					setPropertyValue(field, value, newObject);	
@@ -73,7 +85,24 @@ public class EntityMapper {
 		return newObject;
 	}
 	
-	private Object getRelated(Class<?> type, DatastoreService datastoreService, Long id) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
+	private Object getLazyRelated(final Class<?> type, final DatastoreService datastoreService, final Long value) {
+		Object lazyEntity = Enhancer.create(type, new LazyLoadHandler() {
+			@Override
+			protected Object loadEntity() {
+				try {
+					logger.debug("Lazy loading {} with id {}", type, value);
+					return getRelated(type, datastoreService, value);
+				} catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException
+						| InstantiationException e) {
+					logger.error("{}", e);
+				}
+				return null;
+			}
+		});
+		return lazyEntity;
+	}
+
+	private Object getRelated(final Class<?> type, final DatastoreService datastoreService, final Long id) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
 		Entity entity;
 		try {
 			entity = datastoreService.get(KeyFactory.createKey(getEntityType(type), id));
@@ -83,7 +112,7 @@ public class EntityMapper {
 		return fromDatastoreEntity(entity, type, datastoreService);
 	}
 
-	private void setPropertyValue(Field field, Object value, Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+	private void setPropertyValue(final Field field, final Object value, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		if (value != null && Temporal.class.isAssignableFrom(field.getType())) {
 			PropertyUtils.setProperty(element, field.getName(), DateUtils.dateToTemporal((Date) value, field.getType()));
 		} else {
@@ -91,7 +120,7 @@ public class EntityMapper {
 		}
 	}
 	
-	private Object getPropertyValue(Field field, Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+	private Object getPropertyValue(final Field field, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		Object value = PropertyUtils.getProperty(element, field.getName());
 		if (value != null && AbstractEntity.class.isAssignableFrom(value.getClass())) {
 			 return ((AbstractEntity) value).getId();
@@ -101,7 +130,7 @@ public class EntityMapper {
 		return value;
 	}
 	
-	private List<Field> getFields(Class<?> type) {
+	private List<Field> getFields(final Class<?> type) {
 		
 		if (cached.get(type.getName()) != null) return cached.get(type.getName());
 		
@@ -128,7 +157,7 @@ public class EntityMapper {
 	}
 
 	
-	public static String getEntityType(Class<?> type) {
+	public static String getEntityType(final Class<?> type) {
 		if (type.isAnnotationPresent(EntityName.class)) {
 			EntityName nm = type.getAnnotation(EntityName.class);
 			return nm.value();

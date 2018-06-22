@@ -9,6 +9,7 @@
 		<appengine.sdk.version>1.9.64</appengine.sdk.version>
 		<beanutils.version>1.9.3</beanutils.version>
 		<slf4j.version>1.7.25</slf4j.version>
+		<cglib.version>3.2.6</cglib.version>
 	</properties>
 
 	<build>
@@ -44,5 +45,11 @@
 			<artifactId>commons-beanutils</artifactId>
 			<version>${beanutils.version}</version>
 		</dependency>
+		<dependency>
+		    <groupId>cglib</groupId>
+		    <artifactId>cglib</artifactId>
+		    <version>${cglib.version}</version>
+		</dependency>
+		
 	</dependencies>
 </project>
