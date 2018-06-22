@@ -1,4 +1,4 @@
-package com.ar.sgt.appengine.datastore.annotation;
+package com.ar.sgt.appengine.datastore;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -14,8 +14,10 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ar.sgt.appengine.datastore.AbstractEntity;
-import com.ar.sgt.appengine.datastore.LazyLoadHandler;
+import com.ar.sgt.appengine.datastore.annotation.EntityName;
+import com.ar.sgt.appengine.datastore.annotation.Id;
+import com.ar.sgt.appengine.datastore.annotation.Lazy;
+import com.ar.sgt.appengine.datastore.annotation.Unindexed;
 import com.ar.sgt.appengine.datastore.utils.DateUtils;
 import com.ar.sgt.appengine.datastore.utils.EntityUtils;
 import com.google.appengine.api.datastore.DatastoreService;
