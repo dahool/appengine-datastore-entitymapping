@@ -95,17 +95,17 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	}
 
 	@Override
-	public void delete(T obj) {
-		if (obj != null && obj.getId() != null) {
-			getDatastoreService().delete(KeyFactory.createKey(entityName, obj.getId()));
+	public void delete(Long id) {
+		if (id != null) {
+			getDatastoreService().delete(KeyFactory.createKey(entityName, id));
 		}
 	}
 	
 	@Override
-	public void delete(Iterable<T> objList) {
+	public void delete(Iterable<Long> idList) {
 		Transaction transaction = getDatastoreService().beginTransaction();
-		for (T obj : objList) {
-			getDatastoreService().delete(KeyFactory.createKey(entityName, obj.getId()));	
+		for (Long id : idList) {
+			getDatastoreService().delete(KeyFactory.createKey(entityName, id));	
 		}
 		transaction.commit();
 	}

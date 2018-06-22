@@ -11,9 +11,9 @@ public interface Repository<T extends AbstractEntity> {
 
 	List<T> findAll();
 
-	void delete(T obj);
+	void delete(Long id);
 
-	void delete(Iterable<T> it);
+	void delete(Iterable<Long> it);
 
 	void save(Iterable<T> it);
 
