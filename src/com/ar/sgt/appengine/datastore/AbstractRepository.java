@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.GenericTypeResolver;
 
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
@@ -29,8 +30,9 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	private DatastoreService datastoreService;
 	
-	public AbstractRepository(final Class<T> type) {
-		this.type = type;
+	@SuppressWarnings("unchecked")
+	public AbstractRepository() {
+		this.type = (Class<T>) GenericTypeResolver.resolveTypeArgument(getClass(), AbstractRepository.class);
 		this.entityName = EntityMapper.getEntityType(type);
 	}
 	
