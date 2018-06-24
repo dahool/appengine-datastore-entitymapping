@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.GenericTypeResolver;
 
+import com.ar.sgt.appengine.datastore.query.Order;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
@@ -84,8 +85,9 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	@Override
 	public List<T> findAll() {
 		Query query = new Query(entityName);
+
 		PreparedQuery pq = getDatastoreService().prepare(query);
-		
+
 		List<T> objects = new ArrayList<T>();
 		
 		for (Entity entity : pq.asIterable()) {
@@ -95,6 +97,23 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 		return objects;
 	}
 
+	@Override
+	public List<T> findAll(Order order) {
+		Query query = new Query(entityName);
+		query.addSort(order.getFieldName(), order.getDirection());
+		
+		PreparedQuery pq = getDatastoreService().prepare(query);
+
+		List<T> objects = new ArrayList<T>();
+		
+		for (Entity entity : pq.asIterable()) {
+			objects.add(fromEntity(entity));
+		}
+		
+		return objects;
+
+	}
+	
 	@Override
 	public void delete(Long id) {
 		if (id != null) {
