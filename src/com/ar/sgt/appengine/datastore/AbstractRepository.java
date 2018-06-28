@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.GenericTypeResolver;
 
 import com.ar.sgt.appengine.datastore.query.Order;
+import com.ar.sgt.appengine.datastore.utils.EntityUtils;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
@@ -100,7 +101,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	@Override
 	public List<T> findAll(Order order) {
 		Query query = new Query(entityName);
-		query.addSort(order.getFieldName(), order.getDirection());
+		query.addSort(EntityUtils.getFieldName(type, order.getFieldName()), order.getDirection());
 		
 		PreparedQuery pq = getDatastoreService().prepare(query);
 

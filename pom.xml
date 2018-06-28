@@ -52,11 +52,6 @@
 			<version>${beanutils.version}</version>
 		</dependency>
 		<dependency>
-		    <groupId>cglib</groupId>
-		    <artifactId>cglib</artifactId>
-		    <version>${cglib.version}</version>
-		</dependency>
-		<dependency>
 		    <groupId>org.springframework</groupId>
 		    <artifactId>spring-core</artifactId>
 		    <version>${spring.version}</version>
