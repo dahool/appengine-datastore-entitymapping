@@ -1,3 +1,29 @@
+/*
+Copyright (c) 2018, Sergio Gabriel Teves (https://github.com/dahool)
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the <organization> nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package com.ar.sgt.appengine.datastore;
 
 import java.lang.reflect.InvocationTargetException;
@@ -32,10 +58,13 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	private DatastoreService datastoreService;
 	
+	private TransactionManager txManager;
+	
 	@SuppressWarnings("unchecked")
 	public AbstractRepository() {
 		this.type = (Class<T>) GenericTypeResolver.resolveTypeArgument(getClass(), AbstractRepository.class);
 		this.entityName = EntityMapper.getEntityType(type);
+		this.txManager = new TransactionManager();
 	}
 	
 	protected T fromEntity(Entity entity) {
@@ -69,18 +98,27 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	@Override
 	public void save(T obj) {
+		save(obj, null);
+	}
+
+	@Override
+	public void save(T obj, Transaction txn) {
 		Entity entity = toEntity(obj);
-		getDatastoreService().put(entity);
+		if (txn != null) {
+			getDatastoreService().put(txn, entity);	
+		} else {
+			getDatastoreService().put(entity);
+		}
 		obj.setId(entity.getKey().getId());
 	}
 
 	@Override
 	public void save(Iterable<T> it) {
-		Transaction transaction = getDatastoreService().beginTransaction();
+		Transaction transaction = txManager.beginTransaction(true);
 		for (T e : it) {
-			save(e);
+			save(e, transaction);
 		}
-		transaction.commit();
+		txManager.commit();
 	}
 	
 	@Override
@@ -121,14 +159,21 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 			getDatastoreService().delete(KeyFactory.createKey(entityName, id));
 		}
 	}
+
+	@Override
+	public void delete(Long id, Transaction txn) {
+		if (id != null) {
+			getDatastoreService().delete(txn, KeyFactory.createKey(entityName, id));
+		}
+	}
 	
 	@Override
 	public void delete(Iterable<Long> idList) {
-		Transaction transaction = getDatastoreService().beginTransaction();
+		Transaction transaction = txManager.beginTransaction(true);
 		for (Long id : idList) {
-			getDatastoreService().delete(KeyFactory.createKey(entityName, id));	
+			getDatastoreService().delete(transaction, KeyFactory.createKey(entityName, id));	
 		}
-		transaction.commit();
+		txManager.commit();
 	}
 	
 	protected String getEntityName() {

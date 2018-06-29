@@ -1,0 +1,5 @@
+Very simple library, nothing fancy, to ease working with appengine datastore, making it more ORM friendly.
+
+This is a personal project, anyone can freely use it or fork it.
+
+Released under BSD License 2.0
