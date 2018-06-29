@@ -63,7 +63,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	@SuppressWarnings("unchecked")
 	public AbstractRepository() {
 		this.type = (Class<T>) GenericTypeResolver.resolveTypeArgument(getClass(), AbstractRepository.class);
-		this.entityName = EntityMapper.getEntityType(type);
+		this.entityName = EntityMapper.getEntityName(type);
 		this.txManager = new TransactionManager();
 	}
 	
@@ -78,7 +78,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	protected Entity toEntity(T obj) {
 		try {
-			return mapper.toDatastoreEntity(obj);
+			return mapper.toDatastoreEntity(obj, type);
 		} catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
 			logger.error("toEntity: {}", e);
 			throw new RuntimeException(e);
@@ -87,6 +87,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	@Override
 	public Optional<T> get(Long id) {
+		logger.info("Load {}: {}", type, id);
 		Entity entity;
 		try {
 			entity = getDatastoreService().get(KeyFactory.createKey(entityName, id));
@@ -103,6 +104,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	@Override
 	public void save(T obj, Transaction txn) {
+		logger.info("Save {}: {}", type, obj);
 		Entity entity = toEntity(obj);
 		if (txn != null) {
 			getDatastoreService().put(txn, entity);	
@@ -123,6 +125,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	@Override
 	public List<T> findAll() {
+		logger.info("findAll {}", type);
 		Query query = new Query(entityName);
 
 		PreparedQuery pq = getDatastoreService().prepare(query);
@@ -138,6 +141,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	@Override
 	public List<T> findAll(Order order) {
+		logger.info("findAll {}", type);
 		Query query = new Query(entityName);
 		query.addSort(EntityUtils.getFieldName(type, order.getFieldName()), order.getDirection());
 		
@@ -155,6 +159,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	@Override
 	public void delete(Long id) {
+		logger.info("Delete {}: {}", type, id);
 		if (id != null) {
 			getDatastoreService().delete(KeyFactory.createKey(entityName, id));
 		}
@@ -162,6 +167,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	@Override
 	public void delete(Long id, Transaction txn) {
+		logger.info("Delete {}: {}", type, id);
 		if (id != null) {
 			getDatastoreService().delete(txn, KeyFactory.createKey(entityName, id));
 		}
@@ -169,6 +175,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	
 	@Override
 	public void delete(Iterable<Long> idList) {
+		logger.info("Delete {}: {}", type, idList);
 		Transaction transaction = txManager.beginTransaction(true);
 		for (Long id : idList) {
 			getDatastoreService().delete(transaction, KeyFactory.createKey(entityName, id));	

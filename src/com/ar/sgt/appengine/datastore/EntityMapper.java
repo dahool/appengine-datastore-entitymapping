@@ -59,16 +59,20 @@ public class EntityMapper {
 	
 	private Map<String, List<Field>> cached = new HashMap<String, List<Field>>();
 	
-	public com.google.appengine.api.datastore.Entity toDatastoreEntity(AbstractEntity element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException  {
+	private static final String BOUND_FIELD = "CGLIB$";
+	
+	public com.google.appengine.api.datastore.Entity toDatastoreEntity(AbstractEntity element, Class<?> type) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException  {
 
 		if (element == null) return null;
 		
-		String entityType = getEntityType(element.getClass());
+		String entityName = getEntityName(type);
 		
-		com.google.appengine.api.datastore.Entity entity = element.getId() == null ? new com.google.appengine.api.datastore.Entity(entityType) : new com.google.appengine.api.datastore.Entity(KeyFactory.createKey(entityType, element.getId()));
+		com.google.appengine.api.datastore.Entity entity = element.getId() == null ? new com.google.appengine.api.datastore.Entity(entityName) : new com.google.appengine.api.datastore.Entity(KeyFactory.createKey(entityName, element.getId()));
 		
 		for (Field field : getFields(element.getClass())) {
 			if (field.isAnnotationPresent(Id.class)) {
+				continue;
+			} else if (field.getName().startsWith(BOUND_FIELD)) {
 				continue;
 			}
 			String fieldName = EntityUtils.getFieldName(field);
@@ -133,7 +137,7 @@ public class EntityMapper {
 	private Object getRelated(final Class<?> type, final DatastoreService datastoreService, final Long id) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
 		Entity entity;
 		try {
-			entity = datastoreService.get(KeyFactory.createKey(getEntityType(type), id));
+			entity = datastoreService.get(KeyFactory.createKey(getEntityName(type), id));
 		} catch (EntityNotFoundException e) {
 			return null;
 		}
@@ -185,7 +189,7 @@ public class EntityMapper {
 	}
 
 	
-	public static String getEntityType(final Class<?> type) {
+	public static String getEntityName(final Class<?> type) {
 		if (type.isAnnotationPresent(EntityName.class)) {
 			EntityName nm = type.getAnnotation(EntityName.class);
 			return nm.value();
