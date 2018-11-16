@@ -44,6 +44,8 @@ import com.ar.sgt.appengine.datastore.annotation.EntityName;
 import com.ar.sgt.appengine.datastore.annotation.Id;
 import com.ar.sgt.appengine.datastore.annotation.Lazy;
 import com.ar.sgt.appengine.datastore.annotation.Unindexed;
+import com.ar.sgt.appengine.datastore.converters.FieldConverter;
+import com.ar.sgt.appengine.datastore.converters.StringToDoubleFieldConverter;
 import com.ar.sgt.appengine.datastore.utils.DateUtils;
 import com.ar.sgt.appengine.datastore.utils.EntityUtils;
 import com.google.appengine.api.datastore.DatastoreService;
@@ -60,6 +62,13 @@ public class EntityMapper {
 	private Map<String, List<Field>> cached = new HashMap<String, List<Field>>();
 	
 	private static final String BOUND_FIELD = "CGLIB$";
+	
+	private static Map<Class<?>, FieldConverter<?,?>> converters = new HashMap<>();
+	
+	static {
+		// very rudimentary, temporal implementation. will be improved
+		converters.put(Double.class, new StringToDoubleFieldConverter());
+	}
 	
 	public com.google.appengine.api.datastore.Entity toDatastoreEntity(AbstractEntity element, Class<?> type) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException  {
 
@@ -148,10 +157,21 @@ public class EntityMapper {
 		if (value != null && Temporal.class.isAssignableFrom(field.getType())) {
 			PropertyUtils.setProperty(element, field.getName(), DateUtils.dateToTemporal((Date) value, field.getType()));
 		} else {
-			PropertyUtils.setProperty(element, field.getName(), value);	
+			PropertyUtils.setProperty(element, field.getName(), convertField(field.getType(), value));	
 		}
 	}
 	
+	private <T, S> Object convertField(Class<?> type, S value) {
+		if (value == null) return null;
+		
+		@SuppressWarnings("unchecked")
+		FieldConverter<S, T> converter = (FieldConverter<S, T>) converters.get(type);
+		if (converter != null && converter.canConvert(value.getClass())) {
+			return converter.convert(value);
+		}
+		return value;
+	}
+
 	private Object getPropertyValue(final Field field, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		Object value = PropertyUtils.getProperty(element, field.getName());
 		if (value != null && AbstractEntity.class.isAssignableFrom(value.getClass())) {
