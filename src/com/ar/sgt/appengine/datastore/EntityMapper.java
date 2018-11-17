@@ -40,12 +40,12 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ar.sgt.appengine.datastore.annotation.Converter;
 import com.ar.sgt.appengine.datastore.annotation.EntityName;
 import com.ar.sgt.appengine.datastore.annotation.Id;
 import com.ar.sgt.appengine.datastore.annotation.Lazy;
 import com.ar.sgt.appengine.datastore.annotation.Unindexed;
 import com.ar.sgt.appengine.datastore.converters.FieldConverter;
-import com.ar.sgt.appengine.datastore.converters.StringToDoubleFieldConverter;
 import com.ar.sgt.appengine.datastore.utils.DateUtils;
 import com.ar.sgt.appengine.datastore.utils.EntityUtils;
 import com.google.appengine.api.datastore.DatastoreService;
@@ -63,14 +63,9 @@ public class EntityMapper {
 	
 	private static final String BOUND_FIELD = "CGLIB$";
 	
-	private static Map<Class<?>, FieldConverter<?,?>> converters = new HashMap<>();
+	private Map<Class<?>, FieldConverter> convertersCache = new HashMap<>();
 	
-	static {
-		// very rudimentary, temporal implementation. will be improved
-		converters.put(Double.class, new StringToDoubleFieldConverter());
-	}
-	
-	public com.google.appengine.api.datastore.Entity toDatastoreEntity(AbstractEntity element, Class<?> type) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException  {
+	public com.google.appengine.api.datastore.Entity toDatastoreEntity(AbstractEntity element, Class<?> type) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException  {
 
 		if (element == null) return null;
 		
@@ -153,33 +148,33 @@ public class EntityMapper {
 		return fromDatastoreEntity(entity, type, datastoreService);
 	}
 
-	private void setPropertyValue(final Field field, final Object value, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		if (value != null && Temporal.class.isAssignableFrom(field.getType())) {
+	private void setPropertyValue(final Field field, final Object value, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
+		if (value != null && field.isAnnotationPresent(Converter.class)) {
+			Converter ca = field.getAnnotation(Converter.class);
+			FieldConverter fc = getConverterInstance(ca.value());
+			PropertyUtils.setProperty(element, field.getName(), fc.fromDatastoreEntity(value));
+		} else if (value != null && Temporal.class.isAssignableFrom(field.getType())) {
 			PropertyUtils.setProperty(element, field.getName(), DateUtils.dateToTemporal((Date) value, field.getType()));
 		} else {
-			PropertyUtils.setProperty(element, field.getName(), convertField(field.getType(), value));	
+			PropertyUtils.setProperty(element, field.getName(), value);	
 		}
 	}
 	
-	private <T, S> Object convertField(Class<?> type, S value) {
+	private Object getPropertyValue(final Field field, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
+		Object value = PropertyUtils.getProperty(element, field.getName());
 		if (value == null) return null;
 		
-		@SuppressWarnings("unchecked")
-		FieldConverter<S, T> converter = (FieldConverter<S, T>) converters.get(type);
-		if (converter != null && converter.canConvert(value.getClass())) {
-			return converter.convert(value);
-		}
-		return value;
-	}
-
-	private Object getPropertyValue(final Field field, final Object element) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		Object value = PropertyUtils.getProperty(element, field.getName());
-		if (value != null && AbstractEntity.class.isAssignableFrom(value.getClass())) {
+		if (field.isAnnotationPresent(Converter.class)) {
+			Converter ca = field.getAnnotation(Converter.class);
+			FieldConverter fc = getConverterInstance(ca.value());
+			return fc.toDatastoreEntity(value);
+		} else if (AbstractEntity.class.isAssignableFrom(value.getClass())) {
 			 return ((AbstractEntity) value).getId();
-		} else if (value != null && Temporal.class.isAssignableFrom(value.getClass()) ) {
+		} else if (Temporal.class.isAssignableFrom(value.getClass()) ) {
 			return DateUtils.temporalToDate(value);
 		}
 		return value;
+		
 	}
 	
 	private List<Field> getFields(final Class<?> type) {
@@ -215,6 +210,16 @@ public class EntityMapper {
 			return nm.value();
 		}
 		return type.getSimpleName();	
+	}
+
+	
+	private FieldConverter getConverterInstance(Class<FieldConverter> type) throws InstantiationException, IllegalAccessException {
+		if (convertersCache.containsKey(type)) {
+			return convertersCache.get(type);
+		}
+		FieldConverter cInstance = type.newInstance();
+		convertersCache.put(type, cInstance);
+		return cInstance;
 	}
 	
 }

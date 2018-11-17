@@ -1,9 +1,9 @@
 package com.ar.sgt.appengine.datastore.converters;
 
-public interface FieldConverter<S, T> {
+public interface FieldConverter {
 
-	boolean canConvert(Class<?> claz);
+	Object fromDatastoreEntity(Object source);
 	
-	T convert(S value);
+	Object toDatastoreEntity(Object source);
 	
 }

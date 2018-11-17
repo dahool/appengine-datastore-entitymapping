@@ -79,7 +79,7 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	protected Entity toEntity(T obj) {
 		try {
 			return mapper.toDatastoreEntity(obj, type);
-		} catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+		} catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | InstantiationException e) {
 			logger.error("toEntity: {}", e);
 			throw new RuntimeException(e);
 		}
