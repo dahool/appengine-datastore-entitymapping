@@ -37,6 +37,6 @@ import com.ar.sgt.appengine.datastore.converters.FieldConverter;
 @Target({ElementType.FIELD})
 public @interface Converter {
 
-	Class<FieldConverter> value();
+	Class<? extends FieldConverter> value();
 	
 }

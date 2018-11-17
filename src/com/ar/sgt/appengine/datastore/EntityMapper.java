@@ -213,12 +213,12 @@ public class EntityMapper {
 	}
 
 	
-	private FieldConverter getConverterInstance(Class<FieldConverter> type) throws InstantiationException, IllegalAccessException {
-		if (convertersCache.containsKey(type)) {
-			return convertersCache.get(type);
+	private FieldConverter getConverterInstance(Class<? extends FieldConverter> class1) throws InstantiationException, IllegalAccessException {
+		if (convertersCache.containsKey(class1)) {
+			return convertersCache.get(class1);
 		}
-		FieldConverter cInstance = type.newInstance();
-		convertersCache.put(type, cInstance);
+		FieldConverter cInstance = class1.newInstance();
+		convertersCache.put(class1, cInstance);
 		return cInstance;
 	}
 	
