@@ -40,21 +40,25 @@ public class TransactionManager {
 	
 	public Transaction beginTransaction(boolean xg) {
 		if (transaction != null && transaction.isActive()) {
-			throw new RuntimeException("A transaction already exists");
+			return transaction;
 		}
 		TransactionOptions options = TransactionOptions.Builder.withXG(xg);
 		transaction = DatastoreServiceFactory.getDatastoreService().beginTransaction(options);
 		return transaction;
 	}
 	
-	public void commit() {
+	public synchronized void commit() {
 		if (transaction != null) transaction.commit();
 		transaction = null;
 	}
 	
-	public void rollback() {
+	public synchronized void rollback() {
 		if (transaction != null) transaction.rollback();
 		transaction = null;
+	}
+	
+	public boolean isActive() {
+		return transaction != null;
 	}
 	
 }

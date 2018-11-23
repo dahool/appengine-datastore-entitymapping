@@ -28,6 +28,7 @@ package com.ar.sgt.appengine.datastore;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -116,11 +117,21 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 
 	@Override
 	public void save(Iterable<T> it) {
+		int c = 0;
 		Transaction transaction = txManager.beginTransaction(true);
 		for (T e : it) {
+			c++;
 			save(e, transaction);
+			if ((c % 20) == 0) {
+				txManager.commit();
+				try {
+					Thread.sleep(1500); // wait before instantiate a new transaction for same entity group
+				} catch (InterruptedException e1) {
+				}
+				transaction = txManager.beginTransaction(true);
+			}
 		}
-		txManager.commit();
+		if (txManager.isActive()) txManager.commit();
 	}
 	
 	@Override
@@ -139,6 +150,13 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 		return objects;
 	}
 
+	public Iterable<T> listAllIterable() {
+		logger.info("listAllIterable {}", type);
+		Query query = new Query(entityName);
+		PreparedQuery pq = getDatastoreService().prepare(query);
+		return new IterableEntity<T>(pq);
+	}
+	
 	@Override
 	public List<T> findAll(Order order) {
 		logger.info("findAll {}", type);
@@ -199,6 +217,41 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 			this.initializeDatastore();
 		}
 		return this.datastoreService;
+	}
+
+	protected class EntityIterator<E> implements Iterator<E> {
+
+		private Iterator<Entity> iterator;
+		
+		public EntityIterator(Iterator<Entity> iterator) {
+			this.iterator = iterator;
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return this.iterator.hasNext();
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public E next() {
+			return (E) fromEntity(this.iterator.next());
+		}
+		
+	}
+	
+	protected class IterableEntity<E> implements Iterable<E> {
+
+		private final Iterator<E> iterator;
+		
+		public IterableEntity(final PreparedQuery pq) {
+			this.iterator = new EntityIterator<E>(pq.asIterator());
+		}
+		
+		@Override
+		public Iterator<E> iterator() {
+			return this.iterator;
+		}
 	}
 	
 }
