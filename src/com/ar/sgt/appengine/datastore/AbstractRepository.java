@@ -119,19 +119,24 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	public void save(Iterable<T> it) {
 		int c = 0;
 		Transaction transaction = txManager.beginTransaction(true);
-		for (T e : it) {
-			c++;
-			save(e, transaction);
-			if ((c % 20) == 0) {
-				txManager.commit();
-				try {
-					Thread.sleep(1500); // wait before instantiate a new transaction for same entity group
-				} catch (InterruptedException e1) {
+		try {
+			for (T e : it) {
+				c++;
+				save(e, transaction);
+				if ((c % 20) == 0) {
+					txManager.commit();
+					try {
+						Thread.sleep(1500); // wait before instantiate a new transaction for same entity group
+					} catch (InterruptedException e1) {
+					}
+					transaction = txManager.beginTransaction(true);
 				}
-				transaction = txManager.beginTransaction(true);
 			}
+			if (txManager.isActive()) txManager.commit();
+		} finally {
+			if (txManager.isActive()) txManager.rollback();
 		}
-		if (txManager.isActive()) txManager.commit();
+		
 	}
 	
 	@Override
