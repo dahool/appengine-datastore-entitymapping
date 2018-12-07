@@ -52,6 +52,7 @@ import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.KeyFactory;
+import com.google.appengine.api.datastore.Text;
 
 import net.sf.cglib.proxy.Enhancer;
 
@@ -155,6 +156,9 @@ public class EntityMapper {
 			PropertyUtils.setProperty(element, field.getName(), fc.fromDatastoreEntity(value));
 		} else if (value != null && Temporal.class.isAssignableFrom(field.getType())) {
 			PropertyUtils.setProperty(element, field.getName(), DateUtils.dateToTemporal((Date) value, field.getType()));
+		} else if (value != null && com.google.appengine.api.datastore.Text.class.isAssignableFrom(value.getClass())) {
+			Text text = (Text) value;
+			PropertyUtils.setProperty(element, field.getName(), text.getValue());
 		} else {
 			PropertyUtils.setProperty(element, field.getName(), value);	
 		}
