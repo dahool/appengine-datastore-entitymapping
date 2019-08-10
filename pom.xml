@@ -6,7 +6,7 @@
 	<version>1.0.0-SNAPSHOT</version>
 
 	<properties>
-		<appengine.sdk.version>1.9.64</appengine.sdk.version>
+		<appengine.sdk.version>1.9.76</appengine.sdk.version>
 		<beanutils.version>1.9.3</beanutils.version>
 		<slf4j.version>1.7.25</slf4j.version>
 		<cglib.version>3.2.6</cglib.version>

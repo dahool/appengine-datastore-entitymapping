@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ar.sgt.appengine.datastore.query.Order;
+import com.ar.sgt.appengine.datastore.query.PageRequest;
+import com.ar.sgt.appengine.datastore.query.PageResult;
+import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Transaction;
 
 public interface Repository<T extends AbstractEntity> {
@@ -51,5 +54,9 @@ public interface Repository<T extends AbstractEntity> {
 	void delete(Iterable<Long> it);
 
 	void save(Iterable<T> it);
+
+	PageResult<T> findAll(PageRequest pageRequest);
+
+	PageResult<T> find(Query query, PageRequest pageRequest);
 
 }

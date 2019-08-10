@@ -37,14 +37,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.GenericTypeResolver;
 
 import com.ar.sgt.appengine.datastore.query.Order;
+import com.ar.sgt.appengine.datastore.query.PageRequest;
+import com.ar.sgt.appengine.datastore.query.PageResult;
 import com.ar.sgt.appengine.datastore.utils.EntityUtils;
+import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
+import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.datastore.QueryResultList;
 import com.google.appengine.api.datastore.Transaction;
 
 public abstract class AbstractRepository<T extends AbstractEntity> implements Repository<T> {
@@ -143,9 +148,9 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 	public List<T> findAll() {
 		logger.info("findAll {}", type);
 		Query query = new Query(entityName);
-
+		
 		PreparedQuery pq = getDatastoreService().prepare(query);
-
+		
 		List<T> objects = new ArrayList<T>();
 		
 		for (Entity entity : pq.asIterable()) {
@@ -155,6 +160,60 @@ public abstract class AbstractRepository<T extends AbstractEntity> implements Re
 		return objects;
 	}
 
+	@Override
+	public PageResult<T> findAll(final PageRequest pageRequest) {
+		logger.info("findAll {} {}", type, pageRequest);
+		Query query = new Query(entityName);
+		if (pageRequest.getOrder() != null) {
+			query.addSort(EntityUtils.getFieldName(type, pageRequest.getOrder().getFieldName()), pageRequest.getOrder().getDirection());
+		}
+		
+		PreparedQuery pq = getDatastoreService().prepare(query);
+		
+		List<T> objects = new ArrayList<T>();
+
+		FetchOptions fetchOptions = buildFetchOptions(pageRequest);
+		
+		QueryResultList<Entity> results = pq.asQueryResultList(fetchOptions);
+
+		for (Entity entity : results) {
+			objects.add(fromEntity(entity));
+		}
+		
+		return new PageResult<>(objects, results.getCursor().toWebSafeString());
+	}
+
+	@Override
+	public PageResult<T> find(final Query query, final PageRequest pageRequest) {
+		logger.info("find {} {}", type, pageRequest);
+
+		if (pageRequest.getOrder() != null) {
+			query.addSort(EntityUtils.getFieldName(type, pageRequest.getOrder().getFieldName()), pageRequest.getOrder().getDirection());
+		}
+		
+		PreparedQuery pq = getDatastoreService().prepare(query);
+		
+		List<T> objects = new ArrayList<T>();
+
+		FetchOptions fetchOptions = buildFetchOptions(pageRequest);
+		
+		QueryResultList<Entity> results = pq.asQueryResultList(fetchOptions);
+
+		for (Entity entity : results) {
+			objects.add(fromEntity(entity));
+		}
+		
+		return new PageResult<>(objects, results.getCursor().toWebSafeString());
+	}
+	
+	private FetchOptions buildFetchOptions(final PageRequest pageRequest) {
+		FetchOptions fetchOptions = FetchOptions.Builder.withLimit(pageRequest.getPageSize());
+		if (pageRequest.getCursor() != null && !"".equalsIgnoreCase(pageRequest.getCursor())) {
+			fetchOptions.startCursor(Cursor.fromWebSafeString(pageRequest.getCursor()));
+		}
+		return fetchOptions;
+	}
+	
 	public Iterable<T> listAllIterable() {
 		logger.info("listAllIterable {}", type);
 		Query query = new Query(entityName);
