@@ -7,7 +7,7 @@
 
 	<properties>
 		<appengine.sdk.version>1.9.76</appengine.sdk.version>
-		<beanutils.version>1.9.3</beanutils.version>
+		<beanutils.version>1.9.4</beanutils.version>
 		<slf4j.version>1.7.25</slf4j.version>
 		<cglib.version>3.2.6</cglib.version>
 		<spring.version>4.3.19.RELEASE</spring.version>
